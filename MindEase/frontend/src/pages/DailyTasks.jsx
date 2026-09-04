@@ -13,7 +13,6 @@ function DailyTasks() {
     const getCurrentUser = () => {
         const localUser = localStorage.getItem("mindEaseUser");
         const sessionUser = sessionStorage.getItem("mindEaseUser");
-
         const savedUser = localUser || sessionUser;
 
         if (!savedUser) {
@@ -28,14 +27,13 @@ function DailyTasks() {
     };
 
     const user = getCurrentUser();
-
     const userId = user?.user_id;
 
     const storageKey = userId
         ? `mindEaseTasks_${userId}`
         : null;
 
-    /* ================= LOAD TASKS ================= */
+    // ================= LOAD TASKS =================
 
     useEffect(() => {
         if (!storageKey) {
@@ -44,8 +42,7 @@ function DailyTasks() {
             return;
         }
 
-        const savedTasks =
-            localStorage.getItem(storageKey);
+        const savedTasks = localStorage.getItem(storageKey);
 
         if (savedTasks) {
             try {
@@ -66,7 +63,7 @@ function DailyTasks() {
         setLoaded(true);
     }, [storageKey]);
 
-    /* ================= SAVE TASKS ================= */
+    // ================= SAVE TASKS =================
 
     useEffect(() => {
         if (!loaded || !storageKey) {
@@ -83,7 +80,7 @@ function DailyTasks() {
         );
     }, [tasks, loaded, storageKey]);
 
-    /* ================= ADD TASK ================= */
+    // ================= ADD TASK =================
 
     const addTask = () => {
         if (!taskText.trim() || !deadline) {
@@ -107,7 +104,7 @@ function DailyTasks() {
         setDeadline("");
     };
 
-    /* ================= TOGGLE TASK ================= */
+    // ================= TOGGLE TASK =================
 
     const toggleTask = (id) => {
         setTasks((prevTasks) =>
@@ -122,7 +119,7 @@ function DailyTasks() {
         );
     };
 
-    /* ================= DELETE TASK ================= */
+    // ================= DELETE TASK =================
 
     const deleteTask = (id) => {
         setTasks((prevTasks) =>
@@ -132,7 +129,7 @@ function DailyTasks() {
         );
     };
 
-    /* ================= STATISTICS ================= */
+    // ================= STATISTICS =================
 
     const totalTasks = tasks.length;
 
@@ -150,7 +147,7 @@ function DailyTasks() {
                   (completedTasks / totalTasks) * 100
               );
 
-    /* ================= THEME ================= */
+    // ================= THEME =================
 
     const pageClass = isLight
         ? "min-h-screen bg-[#f5efff] text-[#2d1747]"
@@ -173,8 +170,12 @@ function DailyTasks() {
         : "text-emerald-300";
 
     const cardClass = isLight
-        ? "bg-[#e9ddf7] border border-[#d4bceb] shadow-[0_12px_30px_rgba(111,60,150,0.10)]"
-        : "bg-emerald-950/90 border border-emerald-700/60 shadow-xl";
+        ? "bg-[#e9ddf7] border border-[#d4bceb] shadow-[0_8px_24px_rgba(111,60,150,0.08)]"
+        : "bg-emerald-950/90 border border-emerald-700/60 shadow-lg";
+
+    const taskListCardClass = isLight
+        ? "bg-[#ded0ed] border border-[#cbb7df] shadow-[0_8px_24px_rgba(111,60,150,0.08)]"
+        : "bg-emerald-950/90 border border-emerald-700/60 shadow-lg";
 
     const iconBoxClass = isLight
         ? "bg-[#dcc8f0] border border-[#c49ee5]"
@@ -185,24 +186,20 @@ function DailyTasks() {
         : "bg-emerald-900/80 border-emerald-700/60 text-white placeholder-emerald-100/30 focus:border-emerald-400 focus:ring-emerald-400/10";
 
     const buttonClass = isLight
-        ? "bg-[#a855f7] hover:bg-[#9333ea] text-white shadow-lg shadow-purple-300/30"
-        : "bg-emerald-400 hover:bg-emerald-300 text-emerald-950 shadow-lg";
+        ? "bg-[#a855f7] hover:bg-[#9333ea] text-white shadow-md shadow-purple-300/20"
+        : "bg-emerald-400 hover:bg-emerald-300 text-emerald-950 shadow-md";
 
-    const progressBackground = isLight
-        ? "bg-[#d4c1e8] border-[#c3a9df]"
-        : "bg-emerald-900 border-emerald-800";
-
-    /* ================= UI ================= */
+    // ================= UI =================
 
     return (
         <div className={pageClass}>
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
                 {/* HEADER */}
 
-                <div className="mb-10">
+                <div className="mb-6">
                     <p
-                        className={`text-sm font-semibold uppercase tracking-[0.25em] mb-3 ${
+                        className={`text-xs font-semibold uppercase tracking-[0.22em] mb-2 ${
                             isLight
                                 ? "text-[#9b4de0]"
                                 : "text-emerald-300"
@@ -212,119 +209,129 @@ function DailyTasks() {
                     </p>
 
                     <h1
-                        className={`text-4xl md:text-5xl font-bold mb-3 ${headerText}`}
+                        className={`text-3xl md:text-4xl font-bold mb-2 ${headerText}`}
                     >
                         Daily Tasks
                     </h1>
 
                     <p
-                        className={`max-w-2xl ${secondaryText}`}
+                        className={`text-sm max-w-2xl ${secondaryText}`}
                     >
                         Plan your day, track your progress,
                         and build productive habits.
                     </p>
                 </div>
 
-                {/* STATISTICS */}
+                {/* COMPACT STATISTICS */}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                <div
+                    className={`${cardClass} rounded-2xl px-5 py-4 mb-5`}
+                >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
-                    <div
-                        className={`${cardClass} rounded-3xl p-6`}
-                    >
-                        <div className="flex items-center justify-between">
-                            <p
-                                className={`text-sm ${secondaryText}`}
+                        {/* TOTAL */}
+
+                        <div className="flex items-center gap-3 flex-1">
+                            <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${iconBoxClass}`}
                             >
-                                Total Tasks
-                            </p>
-
-                            <span className="text-2xl">
                                 📋
-                            </span>
+                            </div>
+
+                            <div>
+                                <p
+                                    className={`text-xs ${secondaryText}`}
+                                >
+                                    Total Tasks
+                                </p>
+
+                                <p
+                                    className={`text-xl font-bold ${accentText}`}
+                                >
+                                    {totalTasks}
+                                </p>
+                            </div>
                         </div>
 
-                        <p
-                            className={`text-4xl font-bold mt-3 ${accentText}`}
-                        >
-                            {totalTasks}
-                        </p>
-                    </div>
+                        {/* COMPLETED */}
 
-                    <div
-                        className={`${cardClass} rounded-3xl p-6`}
-                    >
-                        <div className="flex items-center justify-between">
-                            <p
-                                className={`text-sm ${secondaryText}`}
+                        <div className="flex items-center gap-3 flex-1">
+                            <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${iconBoxClass}`}
                             >
-                                Completed
-                            </p>
-
-                            <span className="text-2xl">
                                 ✅
-                            </span>
+                            </div>
+
+                            <div>
+                                <p
+                                    className={`text-xs ${secondaryText}`}
+                                >
+                                    Completed
+                                </p>
+
+                                <p
+                                    className={`text-xl font-bold ${accentText}`}
+                                >
+                                    {completedTasks}
+                                </p>
+                            </div>
                         </div>
 
-                        <p
-                            className={`text-4xl font-bold mt-3 ${accentText}`}
-                        >
-                            {completedTasks}
-                        </p>
-                    </div>
+                        {/* COMPLETION RATE */}
 
-                    <div
-                        className={`${cardClass} rounded-3xl p-6`}
-                    >
-                        <div className="flex items-center justify-between">
-                            <p
-                                className={`text-sm ${secondaryText}`}
+                        <div className="flex items-center gap-3 flex-1">
+                            <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${iconBoxClass}`}
                             >
-                                Completion Rate
-                            </p>
-
-                            <span className="text-2xl">
                                 📈
-                            </span>
-                        </div>
+                            </div>
 
-                        <p
-                            className={`text-4xl font-bold mt-3 ${accentText}`}
-                        >
-                            {completionPercentage}%
-                        </p>
+                            <div>
+                                <p
+                                    className={`text-xs ${secondaryText}`}
+                                >
+                                    Completion Rate
+                                </p>
+
+                                <p
+                                    className={`text-xl font-bold ${accentText}`}
+                                >
+                                    {completionPercentage}%
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* ADD TASK */}
 
                 <div
-                    className={`${cardClass} rounded-3xl p-6 mb-8`}
+                    className={`${cardClass} rounded-2xl p-4 mb-5`}
                 >
-                    <div className="flex items-center gap-3 mb-5">
+                    <div className="flex items-center gap-3 mb-3">
 
                         <div
-                            className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${iconBoxClass}`}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${iconBoxClass}`}
                         >
                             ➕
                         </div>
 
                         <div>
                             <h2
-                                className={`text-xl font-bold ${headerText}`}
+                                className={`text-lg font-bold ${headerText}`}
                             >
                                 Add a Task
                             </h2>
 
                             <p
-                                className={`text-sm ${mutedText}`}
+                                className={`text-xs ${mutedText}`}
                             >
                                 What would you like to accomplish today?
                             </p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_190px_auto] gap-2">
 
                         <input
                             type="text"
@@ -338,7 +345,7 @@ function DailyTasks() {
                                     addTask();
                                 }
                             }}
-                            className={`w-full rounded-xl px-4 py-3 outline-none border focus:ring-2 ${inputClass}`}
+                            className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none border focus:ring-2 ${inputClass}`}
                         />
 
                         <input
@@ -347,82 +354,33 @@ function DailyTasks() {
                             onChange={(e) =>
                                 setDeadline(e.target.value)
                             }
-                            className={`w-full rounded-xl px-4 py-3 outline-none border focus:ring-2 ${inputClass}`}
+                            className={`w-full rounded-lg px-3 py-2.5 text-sm outline-none border focus:ring-2 ${inputClass}`}
                         />
 
                         <button
                             onClick={addTask}
-                            className={`px-6 py-3 font-bold rounded-xl transition ${buttonClass}`}
+                            className={`px-5 py-2.5 text-sm font-bold rounded-lg transition ${buttonClass}`}
                         >
                             Add Task
                         </button>
                     </div>
                 </div>
 
-                {/* PROGRESS */}
-
-                {totalTasks > 0 && (
-                    <div
-                        className={`${cardClass} rounded-3xl p-6 mb-8`}
-                    >
-                        <div className="flex justify-between items-center mb-4">
-                            <div>
-                                <p
-                                    className={`font-semibold ${headerText}`}
-                                >
-                                    Today's Progress
-                                </p>
-
-                                <p
-                                    className={`text-sm mt-1 ${mutedText}`}
-                                >
-                                    Keep going — you're making progress.
-                                </p>
-                            </div>
-
-                            <span
-                                className={`font-bold text-lg ${accentText}`}
-                            >
-                                {completedTasks}/{totalTasks}
-                            </span>
-                        </div>
-
-                        <div
-                            className={`w-full h-4 rounded-full overflow-hidden border ${progressBackground}`}
-                        >
-                            <div
-                                className={
-                                    isLight
-                                        ? "h-full bg-gradient-to-r from-[#c084fc] to-[#9333ea] rounded-full transition-all duration-500"
-                                        : "h-full bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full transition-all duration-500"
-                                }
-                                style={{
-                                    width: `${completionPercentage}%`
-                                }}
-                            />
-                        </div>
-
-                        <p
-                            className={`text-right text-sm mt-2 ${accentText}`}
-                        >
-                            {completionPercentage}% complete
-                        </p>
-                    </div>
-                )}
-
                 {/* TASK LIST */}
 
                 <div>
-                    <div className="flex items-center justify-between mb-5">
+
+                    <div className="flex items-center justify-between mb-3">
+
                         <div>
                             <h2
-                                className={`text-2xl font-bold ${headerText}`}
+                                className={`text-xl font-bold ${headerText}`}
                             >
                                 Today's Tasks
                             </h2>
 
                             <p
-                                className={`text-sm mt-1 ${mutedText}`}
+                                className={`text-xs mt-0.5 ${mutedText}`}
                             >
                                 Stay consistent, one task at a time.
                             </p>
@@ -430,7 +388,7 @@ function DailyTasks() {
 
                         {pendingTasks > 0 && (
                             <span
-                                className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                                     isLight
                                         ? "bg-[#e5d5f4] border border-[#cdb1e9] text-[#9148d1]"
                                         : "bg-emerald-950/90 border border-emerald-700/60 text-emerald-300"
@@ -441,51 +399,58 @@ function DailyTasks() {
                         )}
                     </div>
 
+                    {/* TASK CONTAINER */}
+
                     {tasks.length === 0 ? (
                         <div
-                            className={`${cardClass} rounded-3xl p-12 text-center`}
+                            className={`${taskListCardClass} rounded-2xl p-8 text-center`}
                         >
-                            <div className="text-6xl mb-5">
+                            <div className="text-4xl mb-3">
                                 🌱
                             </div>
 
                             <h3
-                                className={`text-xl font-semibold mb-2 ${headerText}`}
+                                className={`text-lg font-semibold mb-1 ${headerText}`}
                             >
                                 No tasks yet
                             </h3>
 
-                            <p className={mutedText}>
+                            <p
+                                className={`text-sm ${mutedText}`}
+                            >
                                 Add your first task and start
                                 building your productive day.
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
+
                             {tasks.map((task) => {
+
                                 const deadlineDate =
                                     new Date(task.deadline);
 
                                 return (
                                     <div
                                         key={task.id}
-                                        className={`rounded-2xl p-5 flex items-center gap-4 transition border ${
+                                        className={`rounded-xl px-4 py-3 flex items-center gap-3 transition border ${
                                             isLight
                                                 ? task.completed
-                                                    ? "bg-[#e3d7ed] border-[#d0bfdf] opacity-60"
-                                                    : "bg-[#e9ddf7] border-[#d4bceb] hover:bg-[#e4d5f3]"
+                                                    ? "bg-[#d1c3df] border-[#c2b2d2] opacity-60"
+                                                    : "bg-[#ded0ed] border-[#cbb7df] hover:bg-[#d9c9e9]"
                                                 : task.completed
                                                 ? "bg-emerald-950/90 border-emerald-800 opacity-60"
                                                 : "bg-emerald-950/90 border-emerald-700/60 hover:bg-emerald-950"
                                         }`}
                                     >
+
                                         {/* CHECKBOX */}
 
                                         <button
                                             onClick={() =>
                                                 toggleTask(task.id)
                                             }
-                                            className={`w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0 transition ${
+                                            className={`w-7 h-7 rounded-lg border flex items-center justify-center flex-shrink-0 transition text-sm ${
                                                 task.completed
                                                     ? isLight
                                                         ? "bg-[#a855f7] border-[#a855f7] text-white"
@@ -495,15 +460,15 @@ function DailyTasks() {
                                                     : "border-emerald-600 hover:border-emerald-400 hover:bg-emerald-800"
                                             }`}
                                         >
-                                            {task.completed &&
-                                                "✓"}
+                                            {task.completed && "✓"}
                                         </button>
 
                                         {/* TASK */}
 
                                         <div className="flex-1 min-w-0">
+
                                             <p
-                                                className={`font-medium ${
+                                                className={`text-sm font-medium ${
                                                     task.completed
                                                         ? isLight
                                                             ? "line-through text-[#927ca3]"
@@ -517,7 +482,7 @@ function DailyTasks() {
                                             </p>
 
                                             <p
-                                                className={`text-sm mt-1 ${mutedText}`}
+                                                className={`text-xs mt-0.5 ${mutedText}`}
                                             >
                                                 Deadline:{" "}
                                                 {deadlineDate.toLocaleString()}
@@ -527,7 +492,7 @@ function DailyTasks() {
                                         {/* STATUS */}
 
                                         <span
-                                            className={`hidden sm:block text-xs px-3 py-1.5 rounded-full ${
+                                            className={`hidden sm:block text-[11px] px-2.5 py-1 rounded-full ${
                                                 task.completed
                                                     ? isLight
                                                         ? "bg-[#d8c5e9] text-[#8d45c3] border border-[#c4a8dc]"
@@ -550,8 +515,8 @@ function DailyTasks() {
                                             }
                                             className={
                                                 isLight
-                                                    ? "text-[#a58cad] hover:text-red-500 transition text-lg"
-                                                    : "text-emerald-100/30 hover:text-red-300 transition text-lg"
+                                                    ? "text-[#a58cad] hover:text-red-500 transition text-base"
+                                                    : "text-emerald-100/30 hover:text-red-300 transition text-base"
                                             }
                                             title="Delete task"
                                         >
@@ -567,14 +532,14 @@ function DailyTasks() {
                 {/* FOOTER */}
 
                 <div
-                    className={`mt-8 p-5 rounded-2xl border ${
+                    className={`mt-5 px-4 py-3 rounded-xl border ${
                         isLight
                             ? "bg-[#e9ddf7] border-[#d4bceb]"
                             : "bg-emerald-950/80 border-emerald-800/60"
                     }`}
                 >
                     <p
-                        className={`text-xs leading-relaxed ${mutedText}`}
+                        className={`text-[11px] leading-relaxed ${mutedText}`}
                     >
                         Your task progress is currently stored
                         separately for your MindEase account in

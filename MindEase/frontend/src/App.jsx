@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { useTheme } from "./context/ThemeContext";
 
@@ -12,6 +12,21 @@ import DailyTasks from "./pages/DailyTasks";
 import WeeklyAnalysis from "./pages/WeeklyAnalysis";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
+
+function isUserLoggedIn() {
+    const localUser = localStorage.getItem("mindEaseUser");
+    const sessionUser = sessionStorage.getItem("mindEaseUser");
+
+    return !!(localUser || sessionUser);
+}
+
+function HomeRoute() {
+    if (isUserLoggedIn()) {
+        return <Dashboard />;
+    }
+
+    return <Navigate to="/login" replace />;
+}
 
 function ThemeToggle() {
     const { theme, toggleTheme } = useTheme();
@@ -41,7 +56,7 @@ function App() {
             <Routes>
                 <Route
                     path="/"
-                    element={<Dashboard />}
+                    element={<HomeRoute />}
                 />
 
                 <Route
@@ -87,6 +102,11 @@ function App() {
                 <Route
                     path="/profile"
                     element={<Profile />}
+                />
+
+                <Route
+                    path="*"
+                    element={<Navigate to="/" replace />}
                 />
             </Routes>
         </>

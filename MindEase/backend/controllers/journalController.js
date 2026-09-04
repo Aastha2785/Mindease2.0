@@ -1,6 +1,19 @@
 const OpenAI = require("openai");
 const pool = require("../config/db");
 
+const allowedEmotions = [
+    "Happiness",
+    "Calm",
+    "Neutral",
+    "Stress",
+    "Sadness",
+    "Anxiety",
+    "Anger",
+    "Fatigue",
+    "Excitement",
+    "Fear"
+];
+
 const analyzeJournal = async (req, res) => {
     try {
         const { journal, user_id } = req.body;
@@ -31,72 +44,31 @@ const analyzeJournal = async (req, res) => {
                 {
                     role: "system",
                     content: `
-You are the emotion-analysis component of MindEase, a mental wellness application.
+You are the emotion-analysis component of MindEase.
 
-Analyze ONLY the emotional signals expressed in the user's journal text.
+Analyze the emotional signals in the user's journal.
 
-Your task is NOT to diagnose the user and NOT to determine their mental health condition.
+Return EXACTLY THREE different emotions.
 
-Identify the emotions that are actually supported by the writing.
+Choose the three emotions that are most relevant to the emotional content of the journal.
 
-You may identify between 2 and 5 emotions.
+Do not diagnose any mental health condition.
 
-Use only these emotion categories:
+Allowed emotions:
 
-Happiness
-Calm
-Neutral
-Stress
-Sadness
-Anxiety
-Anger
-Fatigue
-Excitement
-Fear
+Happiness, Calm, Neutral, Stress, Sadness, Anxiety, Anger, Fatigue, Excitement, Fear.
 
-IMPORTANT RULES FOR EMOTION ANALYSIS:
+Percentages must represent the relative emotional evidence in the journal.
 
-1. Base the analysis strictly on the user's words.
-2. Do not invent emotions that are not supported by the text.
-3. Positive and negative emotions may appear together.
-4. Do not assume that a person is happy just because something good happened.
-5. Do not assume that a person is stressed just because they mention work or studying.
-6. Look for explicit emotional language, descriptions of feelings, concerns, reactions and emotional context.
-7. If the text contains mixed emotions, represent those mixed emotions.
-8. Do not diagnose depression, anxiety disorders, burnout, or any other medical condition.
-9. Percentages represent the relative emotional evidence present in the text. They are NOT clinical probabilities.
-10. Percentages must be integers.
-11. Percentages must add up to exactly 100.
-12. The highest percentage must correspond to dominantEmotion.
-13. Use 2 to 5 emotions, but do not add weak or unsupported emotions just to increase the number.
-14. If the journal contains very little emotional information, use Neutral as the dominant emotion.
-15. Intensity should describe how strongly the emotions are expressed in the writing:
-    Low
-    Moderate
-    High
+The three percentages must add up to exactly 100.
 
-Return ONLY valid JSON.
+The highest percentage must be the dominant emotion.
 
-Required format:
+All three emotions must be different.
 
-{
-    "emotions": [
-        {
-            "emotion": "Happiness",
-            "percentage": 45
-        },
-        {
-            "emotion": "Stress",
-            "percentage": 35
-        },
-        {
-            "emotion": "Fatigue",
-            "percentage": 20
-        }
-    ],
-    "dominantEmotion": "Happiness",
-    "intensity": "Moderate"
-}
+Intensity must be Low, Moderate, or High.
+
+Return only the requested JSON structure.
 `
                 },
                 {
@@ -106,14 +78,75 @@ Required format:
             ],
 
             response_format: {
-                type: "json_object"
+                type: "json_schema",
+
+                json_schema: {
+                    name: "journal_emotion_analysis",
+
+                    strict: true,
+
+                    schema: {
+                        type: "object",
+
+                        properties: {
+                            emotions: {
+                                type: "array",
+
+                                items: {
+                                    type: "object",
+
+                                    properties: {
+                                        emotion: {
+                                            type: "string",
+                                            enum: allowedEmotions
+                                        },
+
+                                        percentage: {
+                                            type: "integer"
+                                        }
+                                    },
+
+                                    required: [
+                                        "emotion",
+                                        "percentage"
+                                    ],
+
+                                    additionalProperties: false
+                                }
+                            },
+
+                            dominantEmotion: {
+                                type: "string",
+                                enum: allowedEmotions
+                            },
+
+                            intensity: {
+                                type: "string",
+                                enum: [
+                                    "Low",
+                                    "Moderate",
+                                    "High"
+                                ]
+                            }
+                        },
+
+                        required: [
+                            "emotions",
+                            "dominantEmotion",
+                            "intensity"
+                        ],
+
+                        additionalProperties: false
+                    }
+                }
             },
 
             temperature: 0.2,
-            max_completion_tokens: 500
+            max_completion_tokens: 300
         });
 
-        const content = response.choices[0].message.content;
+        const content =
+            response.choices[0].message.content;
 
         console.log("Groq Journal Response:");
         console.log(content);
@@ -122,122 +155,107 @@ Required format:
 
         if (
             !analysis.emotions ||
-            !Array.isArray(analysis.emotions) ||
-            analysis.emotions.length === 0
+            !Array.isArray(analysis.emotions)
         ) {
-            throw new Error("Invalid emotion analysis returned by Groq");
+            throw new Error(
+                "Invalid emotion analysis returned by Groq"
+            );
         }
 
-        // Clean and validate emotion values
-        const allowedEmotions = [
-            "Happiness",
-            "Calm",
-            "Neutral",
-            "Stress",
-            "Sadness",
-            "Anxiety",
-            "Anger",
-            "Fatigue",
-            "Excitement",
-            "Fear"
-        ];
+        if (analysis.emotions.length !== 3) {
+            throw new Error(
+                "Journal analysis must contain exactly 3 emotions"
+            );
+        }
 
-        analysis.emotions = analysis.emotions
-            .filter((item) => {
-                return (
-                    allowedEmotions.includes(item.emotion) &&
-                    Number.isFinite(Number(item.percentage))
+        const emotionNames =
+            analysis.emotions.map(
+                (item) => item.emotion
+            );
+
+        const uniqueEmotionNames =
+            new Set(emotionNames);
+
+        if (uniqueEmotionNames.size !== 3) {
+            throw new Error(
+                "Journal analysis contains duplicate emotions"
+            );
+        }
+
+        for (const emotion of analysis.emotions) {
+            if (
+                !allowedEmotions.includes(
+                    emotion.emotion
+                )
+            ) {
+                throw new Error(
+                    "Invalid emotion returned by Groq"
                 );
-            })
-            .map((item) => ({
-                emotion: item.emotion,
-                percentage: Math.max(
-                    0,
-                    Math.min(100, Math.round(Number(item.percentage)))
-                )
-            }));
+            }
 
-        if (analysis.emotions.length === 0) {
-            throw new Error("No valid emotions returned by Groq");
+            if (
+                !Number.isInteger(
+                    emotion.percentage
+                ) ||
+                emotion.percentage < 0 ||
+                emotion.percentage > 100
+            ) {
+                throw new Error(
+                    "Invalid emotion percentage returned by Groq"
+                );
+            }
         }
 
-        // Make percentages add up to exactly 100
-        let total = analysis.emotions.reduce(
-            (sum, item) => sum + item.percentage,
-            0
-        );
-
-        if (total <= 0) {
-            analysis.emotions = [
-                {
-                    emotion: "Neutral",
-                    percentage: 100
-                }
-            ];
-        } else if (total !== 100) {
-            analysis.emotions = analysis.emotions.map((item) => ({
-                ...item,
-                percentage: Math.round(
-                    (item.percentage / total) * 100
-                )
-            }));
-
-            const normalizedTotal = analysis.emotions.reduce(
-                (sum, item) => sum + item.percentage,
+        const total =
+            analysis.emotions.reduce(
+                (sum, item) =>
+                    sum + item.percentage,
                 0
             );
 
-            const difference = 100 - normalizedTotal;
-
-            const highestIndex = analysis.emotions.reduce(
-                (highestIndex, item, index, array) =>
-                    item.percentage >
-                    array[highestIndex].percentage
-                        ? index
-                        : highestIndex,
-                0
+        if (total !== 100) {
+            throw new Error(
+                `Emotion percentages must total 100. Received ${total}`
             );
-
-            analysis.emotions[highestIndex].percentage += difference;
         }
 
-        // Sort from highest to lowest
         analysis.emotions.sort(
-            (a, b) => b.percentage - a.percentage
+            (a, b) =>
+                b.percentage -
+                a.percentage
         );
 
-        // Dominant emotion must always match the highest percentage
         analysis.dominantEmotion =
             analysis.emotions[0].emotion;
 
-        // Validate intensity
         if (
-            !["Low", "Moderate", "High"].includes(
-                analysis.intensity
-            )
+            ![
+                "Low",
+                "Moderate",
+                "High"
+            ].includes(analysis.intensity)
         ) {
             analysis.intensity = "Moderate";
         }
 
-        // Save journal
-        const journalResult = await pool.query(
-            `
-            INSERT INTO journals
-            (user_id, journal_text, overall_mood)
-            VALUES ($1, $2, $3)
-            RETURNING journal_id, created_at
-            `,
-            [
-                user_id,
-                journal.trim(),
-                analysis.dominantEmotion
-            ]
-        );
+        const journalResult =
+            await pool.query(
+                `
+                INSERT INTO journals
+                (user_id, journal_text, overall_mood)
+                VALUES ($1, $2, $3)
+                RETURNING journal_id, created_at
+                `,
+                [
+                    user_id,
+                    journal.trim(),
+                    analysis.dominantEmotion
+                ]
+            );
 
         const journalId =
             journalResult.rows[0].journal_id;
 
-        // Save emotion breakdown
         for (const emotion of analysis.emotions) {
             await pool.query(
                 `
@@ -319,7 +337,60 @@ const getJournalHistory = async (req, res) => {
 };
 
 
+const deleteJournal = async (req, res) => {
+    try {
+        const { journal_id } = req.params;
+        const { user_id } = req.query;
+
+        if (!journal_id || !user_id) {
+            return res.status(400).json({
+                success: false,
+                error: "Journal ID and User ID are required"
+            });
+        }
+
+        const result = await pool.query(
+            `
+            DELETE FROM journals
+            WHERE journal_id = $1
+            AND user_id = $2
+            RETURNING journal_id
+            `,
+            [
+                journal_id,
+                user_id
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: "Journal not found or does not belong to this user"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Journal deleted successfully",
+            journal_id: result.rows[0].journal_id
+        });
+
+    } catch (error) {
+        console.error(
+            "Delete Journal Error:",
+            error.message
+        );
+
+        res.status(500).json({
+            success: false,
+            error: "Failed to delete journal"
+        });
+    }
+};
+
+
 module.exports = {
     analyzeJournal,
-    getJournalHistory
+    getJournalHistory,
+    deleteJournal
 };
