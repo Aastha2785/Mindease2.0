@@ -2,19 +2,22 @@ const { Pool } = require("pg");
 require("dotenv").config();
 
 const pool = new Pool({
-    user: "postgres",
-    host: "localhost",
-    database: "mindease",
-    password: process.env.DB_PASSWORD,
-    port: 5432
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 pool.connect()
-    .then(() => {
-        console.log("PostgreSQL connected successfully!");
+    .then((client) => {
+        console.log("Supabase PostgreSQL connected successfully!");
+        client.release();
     })
     .catch((error) => {
-        console.error("PostgreSQL connection error:", error.message);
+        console.error(
+            "Supabase PostgreSQL connection error:",
+            error.message
+        );
     });
 
 module.exports = pool;
