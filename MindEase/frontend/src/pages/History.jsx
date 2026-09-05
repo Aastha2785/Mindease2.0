@@ -2,20 +2,22 @@ import { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 
 function getCurrentUser() {
-    const localUser = localStorage.getItem("mindEaseUser");
+    // Always prefer the current session user.
     const sessionUser = sessionStorage.getItem("mindEaseUser");
+    const localUser = localStorage.getItem("mindEaseUser");
 
-    if (localUser) {
-        return JSON.parse(localUser);
+    const savedUser = sessionUser || localUser;
+
+    if (!savedUser) {
+        return null;
     }
 
-    if (sessionUser) {
-        return JSON.parse(sessionUser);
+    try {
+        return JSON.parse(savedUser);
+    } catch {
+        return null;
     }
-
-    return null;
 }
-
 
 function getDateKey(dateString) {
     const date = new Date(dateString);
@@ -27,7 +29,6 @@ function getDateKey(dateString) {
     ).padStart(2, "0")}`;
 }
 
-
 function formatGroupDate(dateString) {
     const date = new Date(dateString);
 
@@ -38,7 +39,6 @@ function formatGroupDate(dateString) {
     });
 }
 
-
 function formatTime(dateString) {
     const date = new Date(dateString);
 
@@ -47,7 +47,6 @@ function formatTime(dateString) {
         minute: "2-digit"
     });
 }
-
 
 function getMoodEmoji(mood) {
     const emojis = {
@@ -66,9 +65,7 @@ function getMoodEmoji(mood) {
     return emojis[mood] || "🙂";
 }
 
-
 export default function History() {
-
     const { theme } = useTheme();
 
     const [journals, setJournals] = useState([]);
@@ -83,24 +80,23 @@ export default function History() {
     const [deletingSelfie, setDeletingSelfie] =
         useState(null);
 
-
     const user = getCurrentUser();
-
     const userId = user?.user_id;
-
 
     const isLight = theme === "light";
 
+    // =====================================================
+    // LOAD JOURNALS
+    // =====================================================
 
     const loadJournals = async () => {
-
         if (!userId) {
+            setJournals([]);
             setLoadingJournals(false);
             return;
         }
 
         try {
-
             setLoadingJournals(true);
 
             const response = await fetch(
@@ -111,43 +107,55 @@ export default function History() {
 
             if (data.success) {
                 setJournals(data.journals || []);
+            } else {
+                setJournals([]);
             }
-
         } catch (error) {
-
             console.error(
                 "Failed to load journal history:",
                 error
             );
 
+            setJournals([]);
         } finally {
-
             setLoadingJournals(false);
         }
     };
 
+    // =====================================================
+    // LOAD SELFIES
+    // =====================================================
 
     const loadSelfies = () => {
-
         if (!userId) {
             setSelfies([]);
             return;
         }
 
+        /*
+         * IMPORTANT:
+         *
+         * FaceScan.jsx saves selfies using:
+         *
+         * mindEaseSelfieHistory_v2_<user_id>
+         *
+         * Therefore History MUST read the exact same key.
+         */
+
         const key =
-            `mindEaseSelfieHistory_${userId}`;
+            `mindEaseSelfieHistory_v2_${userId}`;
 
         try {
+            const saved = JSON.parse(
+                localStorage.getItem(key) || "[]"
+            );
 
-            const saved =
-                JSON.parse(
-                    localStorage.getItem(key) || "[]"
-                );
-
-            setSelfies(saved);
-
+            if (Array.isArray(saved)) {
+                setSelfies(saved);
+            } else {
+                setSelfies([]);
+            }
         } catch (error) {
-
             console.error(
                 "Failed to load selfies:",
                 error
@@ -157,28 +165,38 @@ export default function History() {
         }
     };
 
+    // =====================================================
+    // INITIAL LOAD + EVENT LISTENERS
+    // =====================================================
 
     useEffect(() => {
-
         loadJournals();
         loadSelfies();
-
 
         const handleSelfieUpdate = () => {
             loadSelfies();
         };
 
-
         const handleStorage = (event) => {
+            /*
+             * Listen for changes to THIS user's selfie history.
+             */
 
             if (
                 event.key ===
-                `mindEaseSelfieHistory_${userId}`
+                `mindEaseSelfieHistory_v2_${userId}`
             ) {
                 loadSelfies();
             }
-        };
 
+            /*
+             * Also reload when the logged-in user changes.
+             */
+
+            if (event.key === "mindEaseUser") {
+                loadSelfies();
+            }
+        };
 
         window.addEventListener(
             "mindEaseSelfieHistoryUpdated",
@@ -190,9 +208,7 @@ export default function History() {
             handleStorage
         );
 
-
         return () => {
-
             window.removeEventListener(
                 "mindEaseSelfieHistoryUpdated",
                 handleSelfieUpdate
@@ -202,28 +218,24 @@ export default function History() {
                 "storage",
                 handleStorage
             );
-
         };
-
     }, [userId]);
 
+    // =====================================================
+    // DELETE JOURNAL
+    // =====================================================
 
     const deleteJournal = async (journalId) => {
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to delete this journal?"
-            );
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this journal?"
+        );
 
         if (!confirmed) {
             return;
         }
 
-
         try {
-
             setDeletingJournal(journalId);
-
 
             const response = await fetch(
                 `http://localhost:5000/api/journal/${journalId}?user_id=${userId}`,
@@ -232,18 +244,14 @@ export default function History() {
                 }
             );
 
-
             const data = await response.json();
 
-
             if (!response.ok || !data.success) {
-
                 throw new Error(
                     data.error ||
-                    "Failed to delete journal"
+                        "Failed to delete journal"
                 );
             }
-
 
             setJournals((currentJournals) =>
                 currentJournals.filter(
@@ -251,10 +259,7 @@ export default function History() {
                         journal.journal_id !== journalId
                 )
             );
-
-
         } catch (error) {
-
             console.error(
                 "Delete journal error:",
                 error
@@ -262,62 +267,60 @@ export default function History() {
 
             alert(
                 error.message ||
-                "Failed to delete journal"
+                    "Failed to delete journal"
             );
-
         } finally {
-
             setDeletingJournal(null);
         }
     };
 
+    // =====================================================
+    // DELETE SELFIE
+    // =====================================================
 
     const deleteSelfie = (selfieId) => {
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to delete this selfie?"
-            );
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this selfie?"
+        );
 
         if (!confirmed) {
             return;
         }
 
+        if (!userId) {
+            alert("Please login again.");
+            return;
+        }
 
         try {
-
             setDeletingSelfie(selfieId);
 
+            /*
+             * MUST use the same v2 user-specific key
+             * used by FaceScan.jsx.
+             */
 
             const key =
-                `mindEaseSelfieHistory_${userId}`;
+                `mindEaseSelfieHistory_v2_${userId}`;
 
-
-            const updated =
-                selfies.filter(
-                    (selfie) =>
-                        selfie.id !== selfieId
-                );
-
+            const updated = selfies.filter(
+                (selfie) =>
+                    selfie.id !== selfieId
+            );
 
             localStorage.setItem(
                 key,
                 JSON.stringify(updated)
             );
 
-
             setSelfies(updated);
-
 
             window.dispatchEvent(
                 new Event(
                     "mindEaseSelfieHistoryUpdated"
                 )
             );
-
-
         } catch (error) {
-
             console.error(
                 "Delete selfie error:",
                 error
@@ -326,82 +329,76 @@ export default function History() {
             alert(
                 "Failed to delete selfie"
             );
-
         } finally {
-
             setDeletingSelfie(null);
         }
     };
 
+    // =====================================================
+    // GROUP JOURNALS
+    // =====================================================
 
     const groupedJournals =
         journals.reduce(
             (groups, journal) => {
-
                 const key =
                     getDateKey(
                         journal.created_at
                     );
 
-
                 if (!groups[key]) {
                     groups[key] = [];
                 }
 
-
                 groups[key].push(journal);
 
-
                 return groups;
-
             },
             {}
         );
 
-
     const groupedJournalEntries =
         Object.entries(groupedJournals);
 
+    // =====================================================
+    // THEME
+    // =====================================================
 
     const pageClass = isLight
         ? "min-h-screen bg-[#f4edfb] text-[#33253f]"
         : "min-h-screen bg-[#03150f] text-white";
 
-
     const headingClass = isLight
         ? "text-[#382545]"
         : "text-white";
-
 
     const subtitleClass = isLight
         ? "text-[#745d83]"
         : "text-emerald-100/70";
 
-
     const dateCardClass = isLight
         ? "bg-[#eadcf7] border border-[#d6bdf0]"
         : "bg-[#06251a] border border-emerald-400/20";
-
 
     const journalDividerClass = isLight
         ? "border-[#d7c4e6]"
         : "border-emerald-400/10";
 
-
     const emptyCardClass = isLight
         ? "bg-[#eadcf7] border border-[#d6bdf0]"
         : "bg-[#06251a] border border-emerald-400/20";
 
+    // =====================================================
+    // UI
+    // =====================================================
 
     return (
         <div className={pageClass}>
-
             <div className="max-w-5xl mx-auto px-5 py-8">
 
                 {/* HEADER */}
 
                 <div className="mb-7">
-
                     <h1
                         className={`text-3xl font-bold ${headingClass}`}
                     >
@@ -413,16 +410,14 @@ export default function History() {
                     >
                         Your journal entries and saved selfies
                     </p>
-
                 </div>
 
-
-                {/* JOURNAL HISTORY */}
+                {/* =================================================
+                    JOURNAL HISTORY
+                ================================================= */}
 
                 <section className="mb-10">
-
                     <div className="flex items-center justify-between mb-4">
-
                         <h2
                             className={`text-xl font-semibold ${headingClass}`}
                         >
@@ -437,12 +432,9 @@ export default function History() {
                                 ? "entry"
                                 : "entries"}
                         </span>
-
                     </div>
 
-
                     {loadingJournals ? (
-
                         <div
                             className={`rounded-2xl border p-6 text-center ${emptyCardClass}`}
                         >
@@ -450,13 +442,10 @@ export default function History() {
                                 Loading your journals...
                             </p>
                         </div>
-
                     ) : groupedJournalEntries.length === 0 ? (
-
                         <div
                             className={`rounded-2xl border p-6 text-center ${emptyCardClass}`}
                         >
-
                             <div className="text-3xl mb-2">
                                 📝
                             </div>
@@ -472,27 +461,19 @@ export default function History() {
                             >
                                 Your journal entries will appear here.
                             </p>
-
                         </div>
-
                     ) : (
-
                         <div className="space-y-4">
-
                             {groupedJournalEntries.map(
                                 ([dateKey, dateJournals]) => (
-
                                     <article
                                         key={dateKey}
                                         className={`rounded-2xl border overflow-hidden ${dateCardClass}`}
                                     >
-
                                         {/* DATE HEADER */}
 
                                         <div className="px-5 py-3 border-b border-inherit flex items-center justify-between">
-
                                             <div className="flex items-center gap-2">
-
                                                 <span className="text-lg">
                                                     📅
                                                 </span>
@@ -505,7 +486,6 @@ export default function History() {
                                                             .created_at
                                                     )}
                                                 </h3>
-
                                             </div>
 
                                             <span
@@ -516,37 +496,29 @@ export default function History() {
                                                     ? "journal"
                                                     : "journals"}
                                             </span>
-
                                         </div>
 
-
-                                        {/* JOURNALS FOR THIS DATE */}
+                                        {/* JOURNALS */}
 
                                         <div>
-
                                             {dateJournals.map(
                                                 (
                                                     journal,
                                                     index
                                                 ) => (
-
                                                     <div
                                                         key={
                                                             journal.journal_id
                                                         }
                                                         className={`px-5 py-4 ${
                                                             index !==
-                                                            dateJournals.length -
-                                                                1
+                                                            dateJournals.length - 1
                                                                 ? `border-b ${journalDividerClass}`
                                                                 : ""
                                                         }`}
                                                     >
-
                                                         <div className="flex items-start justify-between gap-4">
-
                                                             <div className="flex items-center gap-3">
-
                                                                 <span className="text-xl">
                                                                     {getMoodEmoji(
                                                                         journal.overall_mood
@@ -554,7 +526,6 @@ export default function History() {
                                                                 </span>
 
                                                                 <div>
-
                                                                     <div
                                                                         className={`font-semibold ${headingClass}`}
                                                                     >
@@ -570,11 +541,8 @@ export default function History() {
                                                                             journal.created_at
                                                                         )}
                                                                     </div>
-
                                                                 </div>
-
                                                             </div>
-
 
                                                             <button
                                                                 onClick={() =>
@@ -593,9 +561,7 @@ export default function History() {
                                                                     ? "Deleting..."
                                                                     : "🗑️ Delete"}
                                                             </button>
-
                                                         </div>
-
 
                                                         <p
                                                             className={`mt-3 text-sm leading-6 ${
@@ -608,32 +574,23 @@ export default function History() {
                                                                 journal.journal_text
                                                             }
                                                         </p>
-
                                                     </div>
-
                                                 )
                                             )}
-
                                         </div>
-
                                     </article>
-
                                 )
                             )}
-
                         </div>
-
                     )}
-
                 </section>
 
-
-                {/* SELFIE HISTORY */}
+                {/* =================================================
+                    SELFIE HISTORY
+                ================================================= */}
 
                 <section>
-
                     <div className="flex items-center justify-between mb-4">
-
                         <h2
                             className={`text-xl font-semibold ${headingClass}`}
                         >
@@ -648,16 +605,12 @@ export default function History() {
                                 ? "selfie"
                                 : "selfies"}
                         </span>
-
                     </div>
 
-
                     {selfies.length === 0 ? (
-
                         <div
                             className={`rounded-2xl border p-6 text-center ${emptyCardClass}`}
                         >
-
                             <div className="text-3xl mb-2">
                                 📸
                             </div>
@@ -673,29 +626,21 @@ export default function History() {
                             >
                                 Saved selfies from Face Scan will appear here.
                             </p>
-
                         </div>
-
                     ) : (
-
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-
                             {selfies.map((selfie) => (
-
                                 <div
                                     key={selfie.id}
                                     className={`rounded-2xl border overflow-hidden ${dateCardClass}`}
                                 >
-
                                     <img
                                         src={selfie.image}
                                         alt="Saved selfie"
                                         className="w-full aspect-square object-cover"
                                     />
 
-
                                     <div className="p-3">
-
                                         <p
                                             className={`text-xs ${subtitleClass}`}
                                         >
@@ -712,7 +657,6 @@ export default function History() {
                                                 }
                                             )}
                                         </p>
-
 
                                         <button
                                             onClick={() =>
@@ -731,21 +675,13 @@ export default function History() {
                                                 ? "Deleting..."
                                                 : "🗑️ Delete"}
                                         </button>
-
                                     </div>
-
                                 </div>
-
                             ))}
-
                         </div>
-
                     )}
-
                 </section>
-
             </div>
-
         </div>
     );
 }

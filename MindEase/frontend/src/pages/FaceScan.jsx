@@ -16,10 +16,12 @@ const emotionEmoji = {
 };
 
 function getCurrentUser() {
-    const localUser = localStorage.getItem("mindEaseUser");
+    // Session user gets priority because it represents
+    // the currently logged-in session.
     const sessionUser = sessionStorage.getItem("mindEaseUser");
+    const localUser = localStorage.getItem("mindEaseUser");
 
-    const storedUser = localUser || sessionUser;
+    const storedUser = sessionUser || localUser;
 
     if (!storedUser) {
         return null;
@@ -48,7 +50,11 @@ function FaceScan() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        if (cameraOn && videoRef.current && streamRef.current) {
+        if (
+            cameraOn &&
+            videoRef.current &&
+            streamRef.current
+        ) {
             videoRef.current.srcObject = streamRef.current;
 
             videoRef.current
@@ -181,35 +187,28 @@ function FaceScan() {
 
             setAnalysis(data.analysis);
 
-            /*
-             * Store Face Scan analysis separately
-             * for each logged-in user.
-             */
-            const storageKey =
+            // Store face analysis separately for this user.
+            const analysisKey =
                 `mindEaseFaceAnalysis_${user.user_id}`;
 
             localStorage.setItem(
-                storageKey,
+                analysisKey,
                 JSON.stringify({
                     analysis: data.analysis,
-                    timestamp: new Date().toISOString()
+                    timestamp:
+                        new Date().toISOString()
                 })
             );
 
-            /*
-             * Tell Dashboard that new Face Scan
-             * data is available.
-             */
             window.dispatchEvent(
                 new Event("mindEaseFaceUpdated")
             );
-
         } catch (err) {
             console.error(err);
 
             setError(
                 err.message ||
-                "Unable to analyze the selfie."
+                    "Unable to analyze the selfie."
             );
         } finally {
             setLoading(false);
@@ -240,19 +239,41 @@ function FaceScan() {
 
         try {
             /*
-             * Selfie history is also user-specific.
+             * IMPORTANT
+             *
+             * Selfies are stored using the SAME key
+             * that History.jsx must read.
+             *
+             * Example:
+             *
+             * user 1 -> mindEaseSelfieHistory_v2_1
+             * user 4 -> mindEaseSelfieHistory_v2_4
+             *
+             * Each user has completely separate selfie history.
              */
-            const storageKey =
-                `mindEaseSelfieHistory_${user.user_id}`;
 
-            const existingHistory = JSON.parse(
-                localStorage.getItem(storageKey) || "[]"
-            );
+            const storageKey =
+                `mindEaseSelfieHistory_v2_${user.user_id}`;
+
+            let existingHistory = [];
+
+            try {
+                existingHistory = JSON.parse(
+                    localStorage.getItem(storageKey) || "[]"
+                );
+
+                if (!Array.isArray(existingHistory)) {
+                    existingHistory = [];
+                }
+            } catch {
+                existingHistory = [];
+            }
 
             const selfieRecord = {
                 id: Date.now(),
                 image: capturedImage,
-                timestamp: new Date().toISOString()
+                timestamp:
+                    new Date().toISOString()
             };
 
             const updatedHistory = [
@@ -265,6 +286,7 @@ function FaceScan() {
                 JSON.stringify(updatedHistory)
             );
 
+            // Notify History.jsx that a new selfie was saved.
             window.dispatchEvent(
                 new Event(
                     "mindEaseSelfieHistoryUpdated"
@@ -273,7 +295,6 @@ function FaceScan() {
 
             setSaved(true);
             setError("");
-
         } catch (err) {
             console.error(err);
 
@@ -285,6 +306,7 @@ function FaceScan() {
 
     const retake = () => {
         stopCamera();
+
         setCapturedImage(null);
         setAnalysis(null);
         setSaved(false);
@@ -296,7 +318,9 @@ function FaceScan() {
             if (streamRef.current) {
                 streamRef.current
                     .getTracks()
-                    .forEach((track) => track.stop());
+                    .forEach((track) => {
+                        track.stop();
+                    });
             }
         };
     }, []);
@@ -323,7 +347,6 @@ function FaceScan() {
         >
             <div className="max-w-5xl mx-auto">
 
-                {/* Header */}
                 <div className="mb-8">
                     <h1
                         className={`text-3xl font-bold ${
@@ -338,12 +361,11 @@ function FaceScan() {
                     <p
                         className={`mt-2 ${secondaryText}`}
                     >
-                        Capture your facial expression and let MindEase
-                        analyze the emotions it can observe.
+                        Capture your facial expression and let
+                        MindEase analyze the emotions it can observe.
                     </p>
                 </div>
 
-                {/* Camera / Capture Card */}
                 <div
                     className={`rounded-3xl border p-6 shadow-xl ${cardClass}`}
                 >
@@ -352,10 +374,8 @@ function FaceScan() {
                         className="hidden"
                     />
 
-                    {/* Start Camera */}
                     {!cameraOn && !capturedImage && (
                         <div className="text-center py-16">
-
                             <div className="text-7xl mb-6">
                                 📷
                             </div>
@@ -382,10 +402,8 @@ function FaceScan() {
                         </div>
                     )}
 
-                    {/* Camera */}
                     {cameraOn && (
                         <div className="space-y-6">
-
                             <div className="flex justify-center">
                                 <video
                                     ref={videoRef}
@@ -397,9 +415,10 @@ function FaceScan() {
                             </div>
 
                             <div className="flex justify-center gap-4">
-
                                 <button
-                                    onClick={captureExpression}
+                                    onClick={
+                                        captureExpression
+                                    }
                                     className={`px-7 py-3 rounded-xl font-semibold transition ${primaryButton}`}
                                 >
                                     📸 Capture Selfie
@@ -415,17 +434,13 @@ function FaceScan() {
                                 >
                                     Cancel
                                 </button>
-
                             </div>
                         </div>
                     )}
 
-                    {/* Captured Image */}
                     {capturedImage && (
                         <div className="space-y-6">
-
                             <div className="text-center">
-
                                 <h2 className="text-2xl font-bold mb-4">
                                     Your Captured Selfie
                                 </h2>
@@ -437,14 +452,14 @@ function FaceScan() {
                                         className="w-full max-w-2xl rounded-2xl border-4 border-emerald-400 shadow-xl"
                                     />
                                 </div>
-
                             </div>
 
-                            {/* Buttons */}
                             <div className="flex flex-wrap justify-center gap-4">
 
                                 <button
-                                    onClick={handleAnalyze}
+                                    onClick={
+                                        handleAnalyze
+                                    }
                                     disabled={loading}
                                     className={`px-6 py-3 rounded-xl font-semibold transition ${primaryButton} disabled:opacity-50`}
                                 >
@@ -479,7 +494,6 @@ function FaceScan() {
                                 >
                                     🔄 Retake
                                 </button>
-
                             </div>
 
                             <p
@@ -495,11 +509,9 @@ function FaceScan() {
                                     ✓ Selfie saved successfully.
                                 </div>
                             )}
-
                         </div>
                     )}
 
-                    {/* Error */}
                     {error && (
                         <div className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500 text-red-500 text-center">
                             {error}
@@ -507,27 +519,22 @@ function FaceScan() {
                     )}
                 </div>
 
-                {/* Analysis */}
                 {analysis && (
                     <div
                         className={`mt-8 rounded-3xl border p-6 shadow-xl ${cardClass}`}
                     >
-
                         <h2 className="text-2xl font-bold mb-6">
                             🧠 Expression Analysis
                         </h2>
 
                         {analysis.emotions && (
                             <div className="space-y-4">
-
                                 {analysis.emotions.map(
                                     (item, index) => (
                                         <div
                                             key={`${item.emotion}-${index}`}
                                         >
-
                                             <div className="flex justify-between mb-2">
-
                                                 <span className="font-semibold">
                                                     {emotionEmoji[
                                                         item.emotion
@@ -536,9 +543,11 @@ function FaceScan() {
                                                 </span>
 
                                                 <span className="font-bold">
-                                                    {item.percentage}%
+                                                    {
+                                                        item.percentage
+                                                    }
+                                                    %
                                                 </span>
-
                                             </div>
 
                                             <div
@@ -548,7 +557,6 @@ function FaceScan() {
                                                         : "bg-emerald-900"
                                                 }`}
                                             >
-
                                                 <div
                                                     className={`h-full rounded-full ${
                                                         isLight
@@ -559,13 +567,10 @@ function FaceScan() {
                                                         width: `${item.percentage}%`
                                                     }}
                                                 />
-
                                             </div>
-
                                         </div>
                                     )
                                 )}
-
                             </div>
                         )}
 
@@ -593,10 +598,8 @@ function FaceScan() {
                             This analysis describes observable facial
                             expressions and is not a medical diagnosis.
                         </p>
-
                     </div>
                 )}
-
             </div>
         </div>
     );

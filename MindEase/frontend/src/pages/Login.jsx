@@ -6,10 +6,8 @@ function Login() {
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
-
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
-
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -19,7 +17,9 @@ function Login() {
         setError("");
 
         if (!username.trim() || !password) {
-            setError("Please enter your username and password.");
+            setError(
+                "Please enter your username and password."
+            );
             return;
         }
 
@@ -44,7 +44,8 @@ function Login() {
 
             if (!response.ok) {
                 throw new Error(
-                    data.error || "Invalid username or password."
+                    data.error ||
+                        "Invalid username or password."
                 );
             }
 
@@ -60,26 +61,39 @@ function Login() {
                 created_at: data.user.created_at
             };
 
+            /*
+             * IMPORTANT:
+             * Clear BOTH storage locations first.
+             *
+             * This prevents an older account from remaining
+             * in the browser when switching users.
+             */
+            localStorage.removeItem("mindEaseUser");
+            sessionStorage.removeItem("mindEaseUser");
+
+            /*
+             * Now store ONLY the newly logged-in user.
+             */
             if (rememberMe) {
                 localStorage.setItem(
                     "mindEaseUser",
                     JSON.stringify(userData)
                 );
-
-                sessionStorage.removeItem("mindEaseUser");
             } else {
                 sessionStorage.setItem(
                     "mindEaseUser",
                     JSON.stringify(userData)
                 );
-
-                localStorage.removeItem("mindEaseUser");
             }
 
             navigate("/");
         } catch (error) {
             console.error("Login Error:", error);
-            setError(error.message);
+
+            setError(
+                error.message ||
+                    "Something went wrong while logging in."
+            );
         } finally {
             setLoading(false);
         }
@@ -87,17 +101,21 @@ function Login() {
 
     return (
         <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-8">
-
             <div className="w-full max-w-md">
 
                 <div className="text-center mb-8">
 
                     <div className="w-20 h-20 mx-auto mb-4 rounded-full border border-emerald-500/40 flex items-center justify-center bg-emerald-500/5">
-                        <span className="text-4xl">🧠</span>
+                        <span className="text-4xl">
+                            🧠
+                        </span>
                     </div>
 
                     <h1 className="text-4xl font-bold">
-                        Mind<span className="text-emerald-500">Ease</span>
+                        Mind
+                        <span className="text-emerald-500">
+                            Ease
+                        </span>
                     </h1>
 
                     <p className="text-gray-400 mt-3">
@@ -138,7 +156,9 @@ function Login() {
                                     type="text"
                                     value={username}
                                     onChange={(e) =>
-                                        setUsername(e.target.value)
+                                        setUsername(
+                                            e.target.value
+                                        )
                                     }
                                     placeholder="Enter your username"
                                     className="w-full bg-black border border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-gray-600 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -168,7 +188,9 @@ function Login() {
                                     }
                                     value={password}
                                     onChange={(e) =>
-                                        setPassword(e.target.value)
+                                        setPassword(
+                                            e.target.value
+                                        )
                                     }
                                     placeholder="Enter your password"
                                     className="w-full bg-black border border-zinc-800 rounded-xl py-3.5 pl-12 pr-12 text-white placeholder-gray-600 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -177,11 +199,15 @@ function Login() {
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        setShowPassword(!showPassword)
+                                        setShowPassword(
+                                            !showPassword
+                                        )
                                     }
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-emerald-400 transition"
                                 >
-                                    {showPassword ? "🙈" : "👁️"}
+                                    {showPassword
+                                        ? "🙈"
+                                        : "👁️"}
                                 </button>
 
                             </div>
@@ -196,7 +222,9 @@ function Login() {
                                     type="checkbox"
                                     checked={rememberMe}
                                     onChange={(e) =>
-                                        setRememberMe(e.target.checked)
+                                        setRememberMe(
+                                            e.target.checked
+                                        )
                                     }
                                     className="accent-emerald-500"
                                 />
@@ -218,7 +246,9 @@ function Login() {
                             disabled={loading}
                             className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-900 disabled:text-gray-500 text-black font-semibold py-3.5 rounded-xl transition duration-200"
                         >
-                            {loading ? "Logging in..." : "Login"}
+                            {loading
+                                ? "Logging in..."
+                                : "Login"}
                         </button>
 
                     </form>
@@ -229,7 +259,9 @@ function Login() {
 
                         <button
                             type="button"
-                            onClick={() => navigate("/register")}
+                            onClick={() =>
+                                navigate("/register")
+                            }
                             className="text-emerald-500 hover:text-emerald-400 font-medium transition"
                         >
                             Create account
@@ -240,7 +272,6 @@ function Login() {
                 </div>
 
             </div>
-
         </div>
     );
 }

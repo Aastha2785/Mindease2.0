@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 
+function getCurrentUser() {
+    const sessionUser = sessionStorage.getItem("mindEaseUser");
+    const localUser = localStorage.getItem("mindEaseUser");
+
+    const savedUser = sessionUser || localUser;
+
+    if (!savedUser) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(savedUser);
+    } catch {
+        return null;
+    }
+}
+
 function DailyTasks() {
     const { theme } = useTheme();
     const isLight = theme === "light";
@@ -9,22 +26,6 @@ function DailyTasks() {
     const [taskText, setTaskText] = useState("");
     const [deadline, setDeadline] = useState("");
     const [loaded, setLoaded] = useState(false);
-
-    const getCurrentUser = () => {
-        const localUser = localStorage.getItem("mindEaseUser");
-        const sessionUser = sessionStorage.getItem("mindEaseUser");
-        const savedUser = localUser || sessionUser;
-
-        if (!savedUser) {
-            return null;
-        }
-
-        try {
-            return JSON.parse(savedUser);
-        } catch {
-            return null;
-        }
-    };
 
     const user = getCurrentUser();
     const userId = user?.user_id;
@@ -36,16 +37,18 @@ function DailyTasks() {
     // ================= LOAD TASKS =================
 
     useEffect(() => {
+        setLoaded(false);
+
         if (!storageKey) {
             setTasks([]);
             setLoaded(true);
             return;
         }
 
-        const savedTasks = localStorage.getItem(storageKey);
+        try {
+            const savedTasks = localStorage.getItem(storageKey);
 
-        if (savedTasks) {
-            try {
+            if (savedTasks) {
                 const parsedTasks = JSON.parse(savedTasks);
 
                 if (Array.isArray(parsedTasks)) {
@@ -53,10 +56,11 @@ function DailyTasks() {
                 } else {
                     setTasks([]);
                 }
-            } catch {
+            } else {
                 setTasks([]);
             }
-        } else {
+        } catch (error) {
+            console.error("Failed to load tasks:", error);
             setTasks([]);
         }
 
@@ -83,6 +87,11 @@ function DailyTasks() {
     // ================= ADD TASK =================
 
     const addTask = () => {
+        if (!userId) {
+            alert("Please log in before adding a task.");
+            return;
+        }
+
         if (!taskText.trim() || !deadline) {
             return;
         }
@@ -222,14 +231,12 @@ function DailyTasks() {
                     </p>
                 </div>
 
-                {/* COMPACT STATISTICS */}
+                {/* STATISTICS */}
 
                 <div
                     className={`${cardClass} rounded-2xl px-5 py-4 mb-5`}
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-
-                        {/* TOTAL */}
 
                         <div className="flex items-center gap-3 flex-1">
                             <div
@@ -239,21 +246,15 @@ function DailyTasks() {
                             </div>
 
                             <div>
-                                <p
-                                    className={`text-xs ${secondaryText}`}
-                                >
+                                <p className={`text-xs ${secondaryText}`}>
                                     Total Tasks
                                 </p>
 
-                                <p
-                                    className={`text-xl font-bold ${accentText}`}
-                                >
+                                <p className={`text-xl font-bold ${accentText}`}>
                                     {totalTasks}
                                 </p>
                             </div>
                         </div>
-
-                        {/* COMPLETED */}
 
                         <div className="flex items-center gap-3 flex-1">
                             <div
@@ -263,21 +264,15 @@ function DailyTasks() {
                             </div>
 
                             <div>
-                                <p
-                                    className={`text-xs ${secondaryText}`}
-                                >
+                                <p className={`text-xs ${secondaryText}`}>
                                     Completed
                                 </p>
 
-                                <p
-                                    className={`text-xl font-bold ${accentText}`}
-                                >
+                                <p className={`text-xl font-bold ${accentText}`}>
                                     {completedTasks}
                                 </p>
                             </div>
                         </div>
-
-                        {/* COMPLETION RATE */}
 
                         <div className="flex items-center gap-3 flex-1">
                             <div
@@ -287,19 +282,16 @@ function DailyTasks() {
                             </div>
 
                             <div>
-                                <p
-                                    className={`text-xs ${secondaryText}`}
-                                >
+                                <p className={`text-xs ${secondaryText}`}>
                                     Completion Rate
                                 </p>
 
-                                <p
-                                    className={`text-xl font-bold ${accentText}`}
-                                >
+                                <p className={`text-xl font-bold ${accentText}`}>
                                     {completionPercentage}%
                                 </p>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
@@ -323,12 +315,11 @@ function DailyTasks() {
                                 Add a Task
                             </h2>
 
-                            <p
-                                className={`text-xs ${mutedText}`}
-                            >
+                            <p className={`text-xs ${mutedText}`}>
                                 What would you like to accomplish today?
                             </p>
                         </div>
+
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_190px_auto] gap-2">
@@ -363,6 +354,7 @@ function DailyTasks() {
                         >
                             Add Task
                         </button>
+
                     </div>
                 </div>
 
@@ -397,9 +389,10 @@ function DailyTasks() {
                                 {pendingTasks} pending
                             </span>
                         )}
+
                     </div>
 
-                    {/* TASK CONTAINER */}
+                    {/* EMPTY STATE */}
 
                     {tasks.length === 0 ? (
                         <div
@@ -426,7 +419,6 @@ function DailyTasks() {
                         <div className="space-y-2">
 
                             {tasks.map((task) => {
-
                                 const deadlineDate =
                                     new Date(task.deadline);
 
@@ -487,6 +479,7 @@ function DailyTasks() {
                                                 Deadline:{" "}
                                                 {deadlineDate.toLocaleString()}
                                             </p>
+
                                         </div>
 
                                         {/* STATUS */}
@@ -522,11 +515,14 @@ function DailyTasks() {
                                         >
                                             🗑️
                                         </button>
+
                                     </div>
                                 );
                             })}
+
                         </div>
                     )}
+
                 </div>
 
                 {/* FOOTER */}
@@ -541,12 +537,11 @@ function DailyTasks() {
                     <p
                         className={`text-[11px] leading-relaxed ${mutedText}`}
                     >
-                        Your task progress is currently stored
-                        separately for your MindEase account in
-                        this browser. Your task history is not
-                        deleted when a new day starts.
+                        Your task progress is stored separately
+                        for each MindEase account in this browser.
                     </p>
                 </div>
+
             </div>
         </div>
     );
