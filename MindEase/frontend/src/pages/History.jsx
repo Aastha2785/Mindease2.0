@@ -100,8 +100,8 @@ export default function History() {
             setLoadingJournals(true);
 
             const response = await fetch(
-                `http://localhost:5000/api/journal/history?user_id=${userId}`
-            );
+    `https://mindease2-0-henna.vercel.app/api/journal/history?user_id=${userId}`
+);
 
             const data = await response.json();
 
@@ -238,11 +238,11 @@ export default function History() {
             setDeletingJournal(journalId);
 
             const response = await fetch(
-                `http://localhost:5000/api/journal/${journalId}?user_id=${userId}`,
-                {
-                    method: "DELETE"
-                }
-            );
+    `https://mindease2-0-henna.vercel.app/api/journal/${journalId}?user_id=${userId}`,
+    {
+        method: "DELETE"
+    }
+);
 
             const data = await response.json();
 

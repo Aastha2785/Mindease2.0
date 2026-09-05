@@ -64,8 +64,8 @@ function WeeklyAnalysis() {
             setLoading(true);
 
             const journalResponse = await fetch(
-                `http://localhost:5000/api/journal/history?user_id=${userId}`
-            );
+    `https://mindease2-0-henna.vercel.app/api/journal/history?user_id=${userId}`
+);
 
             if (journalResponse.ok) {
                 const journalData = await journalResponse.json();

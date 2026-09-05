@@ -155,8 +155,8 @@ function AIAnalysis() {
             setError("");
 
             const response = await fetch(
-                "http://localhost:5000/api/analysis/overall",
-                {
+    "https://mindease2-0-henna.vercel.app/api/analysis/overall",
+    {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
